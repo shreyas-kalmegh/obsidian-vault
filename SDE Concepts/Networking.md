@@ -1,4 +1,3 @@
-
 ## Index
 
 1. Basics
@@ -58,6 +57,7 @@ cat5 = 100Mb
 cat5e = 1Gbps
 cat6 = 10Gbps upto 55m
 cat6a = 10Gbps upto 100m
+This is for copper cables.
 
 RJ45 connector
 This connector is used to connect host to a switch. There are 4 pairs of wires. Some are used for Transmission(TX) and some for Reception(RX). When a host is connected to a switch, a straight through cable is used where TX and RX lines up with host and switch. But if we need to connect host to host or switch to switch then we need to use crossover cables where TX and RX are crossed.
@@ -83,3 +83,5 @@ Wifi uses access points instead of cables and acts like a switch which host like
 
 LAN
 Each device gets an IP address and a MAC address. Each device gets atleast one MAC address which is burned in and permanent one. MAC address is used to locate within a LAN. IP address can be used within a LAN segment but usually used to pass traffic to a different segment
+
+OSI Model

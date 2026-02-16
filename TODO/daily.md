@@ -1,2 +1,1 @@
-- [ ] credit card check
-- [ ] aws notes
+- [ ] DSA - Arrays and Hashmap, take notes in notebook ⏫ ➕ 2025-12-29 📅 2025-12-29

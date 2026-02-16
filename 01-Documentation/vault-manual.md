@@ -1,0 +1,3 @@
+# Vault User Manual
+## Overview
+This document explains how to use the Personal Knowledge System vault...

@@ -1,0 +1,9 @@
+
+# Question
+What is a Spark shuffle?
+
+# Answer
+A medium-depth explanation covering the key mechanics, tradeoffs, and operational considerations related to: **What is a Spark shuffle?**. The answer typically includes 2–5 sentences summarizing how the concept works in Spark, when it applies, and why it matters for performance or correctness.
+
+# Notes
+Refer to related Spark internals in the vault for deeper context.
