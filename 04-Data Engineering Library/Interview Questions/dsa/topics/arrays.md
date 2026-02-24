@@ -1,82 +1,76 @@
-# Arrays Fundamentals
+# Arrays Notes (Interview Quick Reference)
 
-## What an array gives you
-- Contiguous memory (conceptually): great for index-based access.
-- `O(1)` read/write by index.
-- Poor mid-array insertion/deletion (`O(n)` due to shifting).
+## Intuition
+Arrays are index-based containers with fast random access.
 
-## Core mental model
-Think in terms of index ranges and invariants.
-- Invariant example (two pointers): everything left of `l` is processed, everything right of `r` is processed.
-- Invariant example (window): current window `[l, r]` satisfies a condition.
+Key tradeoff:
+- Read/write by index is fast (`O(1)`)
+- Middle insertion/deletion is expensive (`O(n)`) due to shifting
 
-## Complexity cheat sheet
+## When to Use
+Array patterns dominate when problems ask about:
+- Contiguous subarrays
+- Pair relationships
+- Running totals
+- In-place transformations
+
+## Core Mental Model
+Track index boundaries and maintain an invariant.
+
+Common invariants:
+- Two pointers: everything before `l` and after `r` is already processed.
+- Sliding window: current window `[l, r]` satisfies (or is being adjusted to satisfy) a condition.
+- Prefix sum: `pre[i]` stores sum of first `i` elements.
+
+## Complexity Cheat Sheet
 - Access by index: `O(1)`
-- Linear scan: `O(n)`
-- Sort first, then scan: `O(n log n)` + scan
-- Prefix precompute + range query: build `O(n)`, query `O(1)`
+- Full scan: `O(n)`
+- Sort + scan: `O(n log n)` + `O(n)`
+- Prefix build: `O(n)`, range-sum query: `O(1)`
 
-## High-value patterns
-
-### Two pointers
-Use when array is sorted or when you compare from both ends.
-- Typical signals: pair sum, palindrome-like checks, in-place partition.
-- Common bug: moving both pointers without proving why.
-
-### Sliding window
-Use for contiguous subarray/substring optimization.
-- Fixed window: size `k` known.
-- Variable window: grow `r`, shrink `l` until condition holds.
-- Common bug: forgetting to shrink in a `while` loop.
-
-### Prefix sum
-Use when many range-sum queries or counting subarray properties.
-- Formula: sum of `[l..r] = pre[r+1] - pre[l]`.
-- Common bug: off-by-one indexing.
-
-## Interview checklist before coding
-- Is order important?
-- Is array sorted? If not, should I sort?
-- Need contiguous segment or arbitrary picks?
-- Can I trade space for time?
-
-## Templates
-
-### Two pointers (generic)
+## Template 1: Two Pointers (Sorted Pair Sum)
 ```python
-
-def two_pointers(nums):
+def pair_sum_sorted(nums, target):
     l, r = 0, len(nums) - 1
-    ans = None
+
     while l < r:
-        if condition(nums[l], nums[r]):
-            # update ans
+        s = nums[l] + nums[r]
+        if s == target:
+            return [l, r]
+        if s < target:
             l += 1
         else:
             r -= 1
-    return ans
+
+    return [-1, -1]
 ```
 
-### Sliding window (variable size)
+## Template 2: Sliding Window (Variable Size)
 ```python
+def longest_subarray_at_most_k_distinct(nums, k):
+    from collections import defaultdict
 
-def longest_valid_window(nums):
+    count = defaultdict(int)
     l = 0
-    ans = 0
-    state = {}  # counts/sum/etc
+    best = 0
 
     for r, x in enumerate(nums):
-        add_to_state(state, x)
-        while not is_valid(state):
-            remove_from_state(state, nums[l])
+        count[x] += 1
+
+        while len(count) > k:
+            left_val = nums[l]
+            count[left_val] -= 1
+            if count[left_val] == 0:
+                del count[left_val]
             l += 1
-        ans = max(ans, r - l + 1)
-    return ans
+
+        best = max(best, r - l + 1)
+
+    return best
 ```
 
-### Prefix sum
+## Template 3: Prefix Sum
 ```python
-
 def build_prefix(nums):
     pre = [0] * (len(nums) + 1)
     for i, x in enumerate(nums):
@@ -85,5 +79,25 @@ def build_prefix(nums):
 
 
 def range_sum(pre, l, r):
+    # sum of nums[l..r]
     return pre[r + 1] - pre[l]
 ```
+
+## Quick Example
+`nums = [1, 2, 3, 4, 5]`
+- Prefix: `[0, 1, 3, 6, 10, 15]`
+- Sum from index `1` to `3` is `pre[4] - pre[1] = 9`
+
+## Common Pitfalls
+- Off-by-one errors in loops and ranges.
+- Forgetting to shrink window in a `while` loop.
+- Moving both pointers without clear invariant.
+- Mutating array while iterating in a way that breaks indices.
+
+## Interview Tip
+Before coding, classify the problem quickly:
+- Contiguous segment -> sliding window or prefix sum.
+- Pair in sorted data -> two pointers.
+- Many range queries -> prefix sums.
+
+This first classification usually determines the optimal pattern.
