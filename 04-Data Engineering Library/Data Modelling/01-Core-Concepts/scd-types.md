@@ -1,39 +1,62 @@
 # SCD Types (Dimensions)
 
-## Type 1
-Overwrite old value. No history.
+## Overview
+Slowly Changing Dimensions (SCD) define how attribute changes are stored over time.
+Choose type per attribute, not blindly per table.
 
-## Type 2
-Add new row with effective dates and current flag. Full history.
+## Type 1: Overwrite
+- No history kept
+- Best for corrections or non-analytical attributes
 
-## Type 3
-Keep current and previous values in separate columns. Limited history.
+Example:
+- Fixing typo in `customer_name`
 
-## Type 4
-Store current in main dimension and history in separate history table.
+## Type 2: New Row per Change
+- Full history with validity range
+- Typical columns: `effective_from`, `effective_to`, `is_current`
 
-## Type 6
-Hybrid of Type 1 + Type 2 + Type 3.
+Example:
+- `customer_tier` changes from `Silver` to `Gold`
 
-## When to Use
-- Type 1: data correction, low history value
-- Type 2: regulatory/analytical history required
-- Type 3: current vs prior comparison only
-- Type 4: high-change history separated for performance
-- Type 6: both full history and simplified current-state reporting
+## Type 3: Previous Value Column
+- Limited history (current + prior)
+- Simpler than Type 2, but not full timeline
 
-## Checklist
-- [ ] SCD type chosen per attribute, not per table blindly
-- [ ] Surrogate key policy documented
-- [ ] Effective date logic and late-arrival strategy defined
+Example:
+- `previous_plan`, `current_plan`
+
+## Type 4: Current + History Table
+- Current attributes in main dimension
+- Historical changes in separate history table
+
+## Type 6: Hybrid (1+2+3)
+- Supports full history plus convenient current/prior reporting
+- Powerful but can increase model complexity
+
+## Example Type 2 Pattern
+```sql
+-- Simplified Type 2 update idea
+-- 1) expire current row
+-- 2) insert new current row
+```
+
+## Late-Arriving Changes
+For Type 2, late updates can require:
+- Back-dating `effective_from`
+- Recomputing affected validity windows
+- Rebuilding impacted facts if PIT logic is used
 
 ## Common Mistakes
-- Type 2 for all attributes
-- Missing current-flag uniqueness guarantees
+- Using Type 2 for every changing attribute
+- Allowing multiple `is_current = true` rows per natural key
+- Using load timestamp as business effective timestamp
 
-## Interview Prompts
-- How do you handle late arriving dimension updates in Type 2?
+## Practical Checklist
+1. Define which attributes are Type 1 vs Type 2.
+2. Enforce one current row per business key.
+3. Test non-overlapping validity intervals.
+4. Define late-arrival correction workflow.
 
 ## Related Notes
 - [[surrogate-vs-natural-keys]]
-- [[cdc-and-incremental-modeling]]
+- [[late-arriving-data]]

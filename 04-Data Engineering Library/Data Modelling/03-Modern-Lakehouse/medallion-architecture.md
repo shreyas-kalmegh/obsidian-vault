@@ -1,27 +1,50 @@
 # Medallion Architecture
 
-## Layers
-- Bronze: raw ingestion, minimally transformed
-- Silver: cleaned, standardized, deduplicated
-- Gold: business-ready marts and dimensional models
+## Overview
+Medallion organizes data into quality layers:
+- Bronze: raw, replayable ingestion
+- Silver: cleaned and standardized canonical data
+- Gold: business-ready dimensional/semantic models
 
-## Senior Focus
-- Make pipelines idempotent
-- Handle schema evolution safely
-- Keep lineage from Bronze to Gold
+This is a data quality and contract pattern, not just folder naming.
 
-## Checklist
-- [ ] Layer contracts documented
-- [ ] Quality checks per layer
-- [ ] Replay/backfill approach defined
+## Layer Contracts
+### Bronze
+- Keep raw payload and source metadata (`ingest_ts`, offsets, file path)
+- Minimal transformations
+- Immutable or append-focused for audit/replay
+
+### Silver
+- Apply schema enforcement, deduplication, and type normalization
+- Handle CDC semantics and delete propagation
+- Expose canonical domain entities/events
+
+### Gold
+- Build business-facing facts/dimensions and metric-ready tables
+- Apply SCD policies where business history matters
+- Optimize for consumption and semantic consistency
+
+## Example Flow
+- Bronze: `events_kafka_raw`
+- Silver: `events_canonical`
+- Gold: `fct_order_line`, `dim_customer`, `daily_country_metrics`
+
+## Design Rules
+1. Bronze should never contain business KPI logic.
+2. Silver should avoid ad hoc metric definitions.
+3. Gold should not bypass Silver contracts.
 
 ## Common Mistakes
-- Mixing business metrics in Silver
-- Skipping reproducibility for backfills
+- Putting dashboard-specific calculations in Silver
+- Losing replay metadata in Bronze
+- Rebuilding Gold from mixed Silver/Bronze logic without governance
 
-## Interview Prompts
-- How do you map Medallion to Kimball dimensions/facts?
+## Practical Checklist
+1. Define schema and quality rules per layer.
+2. Define ownership per table and layer.
+3. Automate replay/backfill from Bronze.
+4. Add lineage from Bronze to Gold.
 
 ## Related Notes
-- [[gold-layer-dimensional-models]]
 - [[cdc-and-incremental-modeling]]
+- [[gold-layer-dimensional-models]]

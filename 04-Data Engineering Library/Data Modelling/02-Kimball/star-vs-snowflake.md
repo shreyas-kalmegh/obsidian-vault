@@ -1,27 +1,61 @@
 # Star vs Snowflake Schema
 
+## Overview
+Both are dimensional patterns; the main difference is dimension normalization level.
+
 ## Star Schema
-- Denormalized dimensions.
-- Fewer joins, faster BI queries, easier to understand.
+Dimensions are denormalized and directly joinable to facts.
+
+Pros:
+- Fewer joins
+- Simpler BI model
+- Often faster user queries
+
+Cons:
+- Attribute redundancy
+- More storage for repeated hierarchical data
 
 ## Snowflake Schema
-- Normalized dimensions.
-- Less redundancy but more joins and complexity.
+Dimensions are normalized into sub-dimensions.
 
-## Decision Guide
-- Prefer star for analytics and dashboard performance.
-- Use snowflake when strong normalization/governance needs dominate.
+Pros:
+- Less redundancy
+- Stronger normalization/governance control
 
-## Checklist
-- [ ] Query pattern and SLA evaluated
-- [ ] Storage vs performance tradeoff documented
+Cons:
+- More joins
+- Higher query complexity for analysts
+
+## Practical Decision Framework
+Prefer Star when:
+- BI self-service is important
+- Query latency is a priority
+- Dimension sizes are manageable
+
+Use Snowflake when:
+- Dimensions are very large and hierarchical
+- Governance requires strict normalization
+- Teams can handle extra modeling/query complexity
+
+## Example
+Star:
+- `dim_product` includes `category_name`, `brand_name`, `department_name`
+
+Snowflake:
+- `dim_product` -> `dim_category` -> `dim_department`
+
+## Hybrid Pattern (Common in Practice)
+- Keep Star in Gold for analyst usability
+- Maintain normalized reference structures in upstream layers for governance
 
 ## Common Mistakes
-- Snowflaking dimensions unnecessarily
-- Over-denormalizing without quality controls
+- Snowflaking by default without proven benefit
+- Over-denormalizing volatile attributes without change-control strategy
 
-## Interview Prompts
-- When would you choose snowflake over star in modern warehouses?
+## Practical Checklist
+1. Benchmark representative BI queries.
+2. Evaluate analyst usability, not only storage size.
+3. Decide per domain; avoid one-size-fits-all policy.
 
 ## Related Notes
 - [[kimball-principles]]

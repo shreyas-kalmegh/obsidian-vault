@@ -4,104 +4,17 @@
 
 | Pattern | Best For | Core Tooling |
 |---|---|---|
-| Classes/OOP | Stateful domain models | `class`, methods, `super()` |
-| Dataclasses | Lightweight typed records | `@dataclass`, `field(default_factory=...)` |
 | Decorators | Cross-cutting behavior | `functools.wraps` |
 | Closures | Function factories + private state | `nonlocal` |
 | Iterators/Generators | Lazy streaming and pipelines | `__iter__`, `__next__`, `yield` |
 | File I/O | Reliable read/write | `with open(...)` |
 | JSON/CSV | Data interchange | `json`, `csv` |
 | CLI scripts | Command-line tools | `argparse` |
+| Context managers | Deterministic resource cleanup | `with`, `contextlib` |
 
 ---
 
-## 1) Classes and Objects
-
-Use classes to bundle state + behavior.
-
-```python
-class BankAccount:
-    def __init__(self, owner: str, balance: float = 0.0):
-        self.owner = owner
-        self.balance = balance
-
-    def deposit(self, amount: float) -> None:
-        self.balance += amount
-
-    def withdraw(self, amount: float) -> None:
-        if amount > self.balance:
-            raise ValueError("insufficient funds")
-        self.balance -= amount
-```
-
-Notes:
-- Prefer small, focused classes.
-- Validate in `__init__` when invariants matter.
-
-Gotchas:
-- Class attributes are shared across instances.
-
-```python
-class Bad:
-    items = []  # shared by all instances
-```
-
----
-
-## 2) Inheritance and Composition
-
-Use inheritance for clear "is-a" relationships; composition for "has-a".
-
-```python
-class Animal:
-    def speak(self) -> str:
-        return "..."
-
-class Dog(Animal):
-    def speak(self) -> str:
-        return "woof"
-```
-
-```python
-class Engine:
-    def start(self):
-        return "started"
-
-class Car:
-    def __init__(self):
-        self.engine = Engine()  # composition
-```
-
-Notes:
-- Favor composition unless inheritance clearly simplifies design.
-- Use `super()` in overridden methods when parent init/behavior is required.
-
----
-
-## 3) Dataclasses
-
-Great for data containers.
-
-```python
-from dataclasses import dataclass, field
-
-@dataclass
-class User:
-    id: int
-    name: str
-    tags: list[str] = field(default_factory=list)
-```
-
-Why useful:
-- Auto-generates `__init__`, `__repr__`, comparisons.
-
-Gotchas:
-- Never use mutable defaults directly (`tags=[]` is bad).
-- Use `frozen=True` for immutable records.
-
----
-
-## 4) File I/O (`with open`)
+## 1) File I/O (`with open`)
 
 Always use context managers.
 
@@ -128,14 +41,43 @@ Gotchas:
 - `w` overwrites existing file.
 - Always specify `encoding` for text files.
 
+`io` package (in-memory file-like objects):
+
+```python
+from io import StringIO, BytesIO
+
+# Text buffer in memory
+sbuf = StringIO()
+sbuf.write("line1\n")
+sbuf.write("line2\n")
+sbuf.seek(0)
+print(sbuf.read())  # line1\nline2\n
+
+# Binary buffer in memory
+bbuf = BytesIO()
+bbuf.write(b"\x00\x01hello")
+bbuf.seek(0)
+print(bbuf.read())  # b'\\x00\\x01hello'
+```
+
+Common uses:
+- Unit tests (mock file behavior without touching disk)
+- Build CSV/text payloads in memory before upload
+- Adapt APIs that expect file-like objects (`read`, `write`, `seek`)
+
+Gotchas:
+- `StringIO` is text-only; `BytesIO` is binary-only.
+- After writing, call `seek(0)` before reading.
+
 ---
 
-## 5) Decorators
+## 2) Decorators
 
 Wrap function behavior without modifying function body.
 
 ```python
 from functools import wraps
+
 
 def log_call(fn):
     @wraps(fn)
@@ -143,6 +85,7 @@ def log_call(fn):
         print(f"calling {fn.__name__}")
         return fn(*args, **kwargs)
     return wrapper
+
 
 @log_call
 def add(a, b):
@@ -157,7 +100,7 @@ Gotchas:
 
 ---
 
-## 6) Closures
+## 3) Closures
 
 Inner function remembers outer variables.
 
@@ -166,6 +109,7 @@ def make_multiplier(factor: int):
     def mul(x: int) -> int:
         return x * factor
     return mul
+
 
 triple = make_multiplier(3)
 print(triple(4))  # 12
@@ -176,10 +120,12 @@ Stateful closure:
 ```python
 def counter():
     c = 0
+
     def inc():
         nonlocal c
         c += 1
         return c
+
     return inc
 ```
 
@@ -188,7 +134,7 @@ Gotcha:
 
 ---
 
-## 7) Iterators and Iterables
+## 4) Iterators and Iterables
 
 - Iterable: can be looped (`__iter__`)
 - Iterator: yields next items (`__next__`)
@@ -222,7 +168,7 @@ Gotcha:
 
 ---
 
-## 8) Generators
+## 5) Generators
 
 Lazy sequence generation with `yield`.
 
@@ -230,6 +176,7 @@ Lazy sequence generation with `yield`.
 def squares(n):
     for i in range(n):
         yield i * i
+
 
 for x in squares(5):
     print(x)
@@ -249,7 +196,7 @@ Gotcha:
 
 ---
 
-## 9) JSON Handling
+## 6) JSON Handling
 
 ```python
 import json
@@ -309,7 +256,7 @@ Gotchas:
 
 ---
 
-## 10) CSV Handling
+## 7) CSV Handling
 
 ```python
 import csv
@@ -336,7 +283,7 @@ Gotchas:
 
 ---
 
-## 11) CLI Parsing with `argparse`
+## 8) CLI Parsing with `argparse`
 
 ```python
 import argparse
@@ -356,12 +303,13 @@ Notes:
 
 ---
 
-## 12) Context Managers (`with`)
+## 9) Context Managers (`with`)
 
 Use for deterministic setup/teardown (files, locks, DB sessions).
 
 ```python
 from contextlib import contextmanager
+
 
 @contextmanager
 def managed_resource():
@@ -371,13 +319,14 @@ def managed_resource():
     finally:
         print("release")
 
+
 with managed_resource() as r:
     print(r)
 ```
 
 ---
 
-## 13) Common Utility Patterns
+## 10) Common Utility Patterns
 
 ### EAFP style (Pythonic error handling)
 
@@ -408,7 +357,7 @@ c = a | b
 
 ---
 
-## 14) High-Value Gotchas
+## 11) High-Value Gotchas
 
 - Mutable default args (`def f(x, acc=[])`) keep state between calls.
 - Shadowing built-ins (`list`, `dict`, `sum`) causes bugs.
@@ -418,13 +367,12 @@ c = a | b
 
 ---
 
-## 15) Selection Cheatsheet
+## 12) Selection Cheatsheet
 
-- Structured record-like object: `@dataclass`
-- Stream processing large data: generator
 - Reusable behavior around functions: decorator
 - Stateful function factory: closure
 - Sequential data transform pipeline: iterator/generator + comprehensions
 - CLI script: `argparse`
 - Data interchange: `json`
 - Tabular lightweight I/O: `csv`
+- Deterministic cleanup: context manager

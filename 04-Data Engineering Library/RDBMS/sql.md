@@ -1,59 +1,126 @@
-# PostgreSQL Notes (Structured)
+# SQL Interview Cheatsheet (PostgreSQL-Oriented)
 
-## Table of Contents
-- [Handle Missing Data](#handle-missing-data)
-- [Normal Forms](#normal-forms)
-- [Joins](#joins)
-- [DCL](#dcl)
-- [DML](#dml)
-- [DDL](#ddl)
-- [Keys and Constraints](#keys-and-constraints)
-- [Key Types (Conceptual)](#key-types-conceptual)
-- [Query Planning](#query-planning)
-- [Indexes](#indexes)
-- [Views](#views)
-- [Window Functions](#window-functions)
-- [Grouping Extensions](#grouping-extensions)
-- [`EXISTS`](#exists)
-- [CTE](#cte)
-- [Transactions](#transactions)
-- [Pattern Matching (`LIKE`)](#pattern-matching-like)
-- [Fetch / Pagination](#fetch--pagination)
-- [Join Algorithms (Planner)](#join-algorithms-planner)
-- [Pivot and Unpivot](#pivot-and-unpivot)
-- [Lateral Join](#lateral-join)
-- [Data Anomalies](#data-anomalies)
-- [Useful Functions](#useful-functions)
-- [Quick Reminders](#quick-reminders)
+## Quick Reference Table
 
-## Handle Missing Data
-- Use `COALESCE` to replace `NULL` values.
-- Use `CASE` when replacement logic depends on conditions.
+| Topic | What Interviewers Check | High-Value Keywords |
+|---|---|---|
+| Joins | Can you choose correct join semantics | `INNER`, `LEFT`, `EXISTS`, anti-join |
+| Aggregation | Can you summarize correctly | `GROUP BY`, `HAVING`, `ROLLUP`, `CUBE` |
+| Window functions | Can you solve ranking/running queries | `ROW_NUMBER`, `RANK`, `LAG`, `LEAD` |
+| Data modeling | Do you understand integrity/anomalies | keys, FKs, normal forms |
+| Transactions | Can you reason about correctness | ACID, `BEGIN/COMMIT/ROLLBACK` |
+| Indexing | Can you reason about performance tradeoffs | B-tree, partial/index-only, `EXPLAIN` |
+| Upsert/pipelines | Can you handle real write paths | `ON CONFLICT`, CTEs, `RETURNING` |
+
+---
+
+## 1) SQL Execution Order (Mental Model)
+
+Logical order (simplified):
+1. `FROM` / `JOIN`
+2. `WHERE`
+3. `GROUP BY`
+4. `HAVING`
+5. `SELECT`
+6. `ORDER BY`
+7. `LIMIT/OFFSET`
+
+Why this matters:
+- You cannot use aggregate aliases in `WHERE`.
+- Filter early in `WHERE` before grouping when possible.
+
+---
+
+## 2) NULL Handling
 
 ```sql
 SELECT COALESCE(discount, 0) AS discount_value
 FROM prices;
 ```
 
-## Normal Forms
-- `1NF`: Atomic values only, no repeating groups.
-- `2NF`: No partial dependency on part of a composite key.
-- `3NF`: No transitive dependencies.
-- `BCNF`: If `A -> B`, then `A` must be a super key.
-- `4NF`: No non-trivial multivalued dependencies.
+Patterns:
+- `COALESCE(a, b, c)` for fallback values.
+- `CASE` for conditional replacement.
 
-## Joins
-![Join Types](image.png)
+Gotchas:
+- `NULL = NULL` is not true; use `IS NULL`.
+- `NOT IN (...)` with `NULL` in the subquery can return no rows unexpectedly.
 
-### Anti Join
+---
+
+## 3) Arithmetic, Data Types, and NULLs
+
+### Integer vs decimal math
+- If both operands are integer types, many engines perform integer division.
+- Cast one side to decimal/numeric to preserve fractions.
+
 ```sql
-SELECT a.*
-FROM a
-LEFT JOIN b ON b.id = a.id
-WHERE b.id IS NULL;
+-- integer division (can truncate)
+SELECT 5 / 2;  -- often 2
+
+-- decimal division
+SELECT 5::numeric / 2;  -- 2.5
 ```
 
-### Semi Join
+### Aggregate arithmetic
+- `SUM(int_col)` can stay integer-like; cast before division when needed.
+- Use `NULLIF(denominator, 0)` to avoid divide-by-zero.
+
+```sql
+SELECT
+    ROUND(
+        SUM(price::numeric * units) / NULLIF(SUM(units), 0),
+        2
+    ) AS avg_price
+FROM sales;
+```
+
+### `NULL` behavior in arithmetic
+- Any arithmetic with `NULL` returns `NULL`.
+- Aggregates:
+  - `COUNT(col)` ignores `NULL`
+  - `COUNT(*)` counts rows
+  - `SUM/AVG/MIN/MAX` ignore `NULL` inputs
+
+```sql
+SELECT
+    10 + NULL AS a,                -- NULL
+    COALESCE(10 + NULL, 0) AS b;   -- 0
+```
+
+### Output formatting caveat
+- `ROUND(x, 2)` rounds value but display may still show `2` instead of `2.00`.
+- Cast to fixed-scale numeric for consistent formatting:
+
+```sql
+SELECT ROUND(2::numeric, 2)::numeric(10,2);  -- 2.00
+```
+
+Interview checklist:
+- Explicitly cast before division.
+- Protect denominator with `NULLIF`.
+- Use `COALESCE` only where business-default value is valid.
+- Mention integer-vs-decimal behavior and `NULL` propagation.
+
+---
+
+## 4) Joins You Must Know
+
+### Inner Join
+```sql
+SELECT a.id, b.value
+FROM a
+JOIN b ON b.id = a.id;
+```
+
+### Left Join (preserve left side)
+```sql
+SELECT a.*, b.value
+FROM a
+LEFT JOIN b ON b.id = a.id;
+```
+
+### Semi Join (`EXISTS`)
 ```sql
 SELECT a.*
 FROM a
@@ -64,579 +131,522 @@ WHERE EXISTS (
 );
 ```
 
-## DCL
-### Commands
-- `GRANT`
-- `REVOKE`
-
+### Anti Join (find missing matches)
 ```sql
-GRANT privilege_list
-ON object_name
-TO user_name;
-
-REVOKE privilege_list
-ON object_name
-FROM user_name;
+SELECT a.*
+FROM a
+LEFT JOIN b ON b.id = a.id
+WHERE b.id IS NULL;
 ```
 
-## DML
-### `SELECT INTO`
-Creates a new table from a query result.
+Caveat:
+- Prefer `EXISTS`/anti-join over `IN`/`NOT IN` when `NULL` handling is ambiguous.
 
+---
+
+## 5) Aggregation Patterns
+
+### Basic group + filter groups
 ```sql
-SELECT select_list
-INTO [TEMPORARY | TEMP | UNLOGGED] [TABLE] new_table_name
-FROM table_name
-WHERE search_condition;
-```
-
-### `INSERT`
-`RETURNING` can return inserted rows.
-
-```sql
-INSERT INTO table_name (column1, column2)
-VALUES (value1, value2)
-RETURNING *;
-```
-
-```sql
-INSERT INTO links (url, name)
-VALUES ('http://www.oreilly.com', 'O''Reilly Media');
-```
-
-### `UPDATE`
-```sql
-UPDATE table_name
-SET column1 = value1,
-    column2 = value2
-WHERE condition
-RETURNING *;
-```
-
-```sql
-UPDATE t1
-SET c1 = new_value
-FROM t2
-WHERE t1.c2 = t2.c2;
-```
-
-### `DELETE`
-PostgreSQL does not support `DELETE JOIN`, but supports `USING`.
-
-```sql
-DELETE FROM table_name
-WHERE condition
-RETURNING *;
-```
-
-```sql
-DELETE FROM contacts
-USING blacklist
-WHERE contacts.phone = blacklist.phone;
-```
-
-### Merge / Upsert
-`ON CONFLICT` is available in PostgreSQL `9.5+`.
-
-```sql
-INSERT INTO table_name (column_list)
-VALUES (value_list)
-ON CONFLICT target
-DO NOTHING;
-```
-
-```sql
-INSERT INTO customers (name, email)
-VALUES ('Microsoft', 'hotline@microsoft.com')
-ON CONFLICT (name)
-DO UPDATE SET email = EXCLUDED.email || ';' || customers.email;
-```
-
-## DDL
-### `CREATE TABLE`
-```sql
-CREATE TABLE [IF NOT EXISTS] table_name (
-  column1 datatype(length) column_constraint,
-  column2 datatype(length) column_constraint,
-  table_constraints
-);
-```
-
-### `CREATE TABLE AS`
-Preferred over `SELECT INTO` for clarity.
-
-```sql
-CREATE TABLE new_table_name AS
-SELECT ...
-FROM ...;
-```
-
-### `ALTER TABLE`
-Common operations:
-- Add/drop column
-- Rename column/table
-- Change default
-- Set/drop `NOT NULL`
-- Add constraints
-
-```sql
-ALTER TABLE table_name
-ADD COLUMN column_name datatype column_constraint;
-```
-
-```sql
-ALTER TABLE table_name
-RENAME COLUMN old_name TO new_name;
-```
-
-### `DROP TABLE`
-```sql
-DROP TABLE [IF EXISTS] table_name [CASCADE | RESTRICT];
-```
-
-### `TRUNCATE`
-Faster than deleting all rows and can reset identity values.
-
-```sql
-TRUNCATE TABLE table_name RESTART IDENTITY;
-```
-
-## Keys and Constraints
-### Primary Key
-- Uniquely identifies each row.
-- Implies `NOT NULL` + `UNIQUE`.
-- One per table.
-
-```sql
-CREATE TABLE t (
-  c1 data_type,
-  c2 data_type,
-  PRIMARY KEY (c1, c2)
-);
-```
-
-```sql
-ALTER TABLE table_name
-ADD PRIMARY KEY (column_1, column_2);
-```
-
-```sql
-ALTER TABLE vendors
-ADD COLUMN id SERIAL PRIMARY KEY;
-```
-
-### Foreign Key
-```sql
-[CONSTRAINT fk_name]
-FOREIGN KEY (fk_columns)
-REFERENCES parent_table(parent_key_columns)
-[ON DELETE delete_action]
-[ON UPDATE update_action]
-```
-
-```sql
-ALTER TABLE child_table
-ADD CONSTRAINT fk_name
-FOREIGN KEY (fk_columns)
-REFERENCES parent_table (parent_key_columns);
-```
-
-Common `ON DELETE` options:
-- `SET NULL`
-- `CASCADE`
-- `SET DEFAULT`
-
-### Check Constraint
-```sql
-CREATE TABLE employees (
-  id SERIAL PRIMARY KEY,
-  first_name VARCHAR(50),
-  last_name VARCHAR(50),
-  birth_date DATE CHECK (birth_date > '1900-01-01'),
-  joined_date DATE CHECK (joined_date > birth_date),
-  salary NUMERIC CHECK (salary > 0)
-);
-```
-
-### Unique Constraint / Index
-```sql
-CREATE TABLE t (
-  c1 data_type,
-  c2 data_type,
-  c3 data_type,
-  UNIQUE (c2, c3)
-);
-```
-
-```sql
-CREATE UNIQUE INDEX CONCURRENTLY equipment_equip_id
-ON equipment (equip_id);
-
-ALTER TABLE equipment
-ADD CONSTRAINT unique_equip_id
-UNIQUE USING INDEX equipment_equip_id;
-```
-
-### Not Null
-```sql
-ALTER TABLE table_name
-ALTER COLUMN column_name SET NOT NULL;
-```
-
-Special case:
-```sql
-CHECK (column IS NOT NULL)
-```
-
-## Key Types (Conceptual)
-- `Surrogate Key`: Artificial identifier (often auto-incremented).
-- `Candidate Key`: Minimal set of attributes that can uniquely identify a row.
-- `Primary Key`: Chosen candidate key.
-- `Alternate Key`: Candidate key not chosen as primary key.
-- `Super Key`: Any attribute set that uniquely identifies rows.
-
-## Query Planning
-## `EXPLAIN`
-Shows planner decisions: scans, joins, estimated rows, and costs.
-
-```sql
-EXPLAIN [(option [, ...])] sql_statement;
-```
-
-Options include:
-- `ANALYZE`
-- `VERBOSE`
-- `COSTS`
-- `BUFFERS`
-- `TIMING`
-- `SUMMARY`
-- `FORMAT {TEXT | XML | JSON | YAML}`
-
-Safe analysis pattern for write statements:
-
-```sql
-BEGIN;
-  EXPLAIN ANALYZE sql_statement;
-ROLLBACK;
-```
-
-## Indexes
-An index is a separate structure (often `B-tree`) that speeds reads at write/storage cost.
-
-### Create / Drop
-```sql
-CREATE INDEX index_name
-ON table_name [USING method] (
-  column_name [ASC | DESC] [NULLS {FIRST | LAST}],
-  ...
-);
-```
-
-```sql
-DROP INDEX [CONCURRENTLY] [IF EXISTS] index_name [CASCADE | RESTRICT];
-```
-
-`DROP INDEX CONCURRENTLY` limitations:
-- No `CASCADE`
-- Cannot run inside a transaction block
-
-### Inspect Indexes
-```sql
-SELECT tablename, indexname, indexdef
-FROM pg_indexes
-WHERE schemaname = 'public'
-ORDER BY tablename, indexname;
-```
-
-```sql
-\d table_name
-```
-
-### Index Types
-#### B-tree
-- Default
-- Great for range and equality predicates (`<, <=, =, >=, BETWEEN, IN`)
-- Supports prefix `LIKE 'foo%'`
-
-#### Hash
-- Equality-only (`=`)
-
-```sql
-CREATE INDEX idx_name
-ON table_name USING HASH (col);
-```
-
-#### GIN
-- Good for multi-valued data (`jsonb`, arrays, `hstore`, ranges).
-
-#### BRIN
-- Small and cheap for very large, naturally ordered data.
-
-#### GiST / SP-GiST
-- Flexible trees for geometric, full-text, and partitioned space use cases.
-
-### Other Index Patterns
-- `UNIQUE` index enforces uniqueness (multiple `NULL` values are allowed).
-- Expression index:
-
-```sql
-CREATE INDEX idx_expr
-ON table_name (expression);
-```
-
-- Partial index:
-
-```sql
-CREATE INDEX idx_customer_inactive
-ON customer (active)
-WHERE active = 0;
-```
-
-### REINDEX vs DROP + CREATE
-- `REINDEX`: blocks writes, keeps table readable.
-- `DROP/CREATE`: can cause larger lock windows depending on mode and usage.
-
-### Clustered vs Non-clustered (PostgreSQL)
-- PostgreSQL tables are heap-organized.
-- `CLUSTER` rewrites a table once using index order, but order is not automatically maintained.
-
-## Views
-### View
-A view is a stored query exposed as a virtual table.
-
-### Materialized View
-Stores query results physically.
-
-```sql
-CREATE MATERIALIZED VIEW view_name
-AS query
-WITH [NO] DATA;
-
-REFRESH MATERIALIZED VIEW [CONCURRENTLY] view_name;
-```
-
-`CONCURRENTLY` requires a `UNIQUE` index on the materialized view.
-
-### Recursive View
-```sql
-CREATE RECURSIVE VIEW reporting_line (employee_id, subordinates) AS
-SELECT employee_id, full_name
+SELECT department_id, COUNT(*) AS n
 FROM employees
-WHERE manager_id IS NULL
-UNION ALL
-SELECT e.employee_id, rl.subordinates || ' > ' || e.full_name
-FROM employees e
-JOIN reporting_line rl ON e.manager_id = rl.employee_id;
+GROUP BY department_id
+HAVING COUNT(*) >= 5;
 ```
 
-## Window Functions
-Common functions:
-- `row_number()`
-- `rank()`
-- `dense_rank()`
-- `percent_rank()`
-- `cume_dist()`
-- `ntile(n)`
-- `lag(col, n)`
-- `lead(col, n)`
-- `nth_value(col, n)`
-- Aggregates with window (`min/max/sum/avg`)
-- `FILTER (...)` with aggregates/windows
+### Grouping extensions
+- `ROLLUP(c1, c2, c3)` -> hierarchical subtotals + grand total
+- `CUBE(c1, c2, c3)` -> all subtotal combinations
+- `GROUPING SETS (...)` -> custom subtotal combinations
 
+```sql
+SELECT c1, c2, SUM(val)
+FROM t
+GROUP BY GROUPING SETS ((c1, c2), (c1), ());
+```
+
+`GROUPING SETS` example (explicit custom subtotals):
 ```sql
 SELECT
-  name,
-  weight,
-  ntile(2) OVER ntile_window AS by_half,
-  ntile(3) OVER ntile_window AS thirds
-FROM cats
-WINDOW ntile_window AS (ORDER BY weight)
-ORDER BY weight, name;
-```
-
-Note: with `ORDER BY` and default window frame, aggregate windows act like running totals.
-
-## Grouping Extensions
-### `GROUPING SETS`
-```sql
-SELECT c1, c2, aggregate_function(c3)
-FROM table_name
+  region,
+  product,
+  SUM(revenue) AS revenue
+FROM sales
 GROUP BY GROUPING SETS (
-  (c1, c2),
-  (c1),
-  (c2),
-  ()
+  (region, product),  -- detail
+  (region),           -- subtotal by region
+  (product),          -- subtotal by product
+  ()                  -- grand total
 );
 ```
 
-`GROUPING(column)` returns:
-- `0` if column is in current grouping set
-- `1` otherwise
-
-### `ROLLUP` and `CUBE`
-`ROLLUP(c1, c2, c3)` produces:
-- `(c1, c2, c3)`
-- `(c1, c2)`
-- `(c1)`
-- `()`
-
-`CUBE(c1, c2, c3)` produces all combinations.
-
-## `EXISTS`
+`CUBE` example (all combinations):
 ```sql
-SELECT column1
-FROM table_1
-WHERE EXISTS (
-  SELECT 1
-  FROM table_2
-  WHERE table_2.column_2 = table_1.column_1
-);
+SELECT
+  region,
+  channel,
+  SUM(revenue) AS revenue
+FROM sales
+GROUP BY CUBE (region, channel);
 ```
 
-## CTE
-Improves readability, modularity, and supports recursion.
-
+Use `GROUPING(...)` to identify subtotal rows:
 ```sql
-WITH cte_name (column_list) AS (
-  CTE_query_definition
+SELECT
+  region,
+  channel,
+  SUM(revenue) AS revenue,
+  GROUPING(region)  AS g_region,
+  GROUPING(channel) AS g_channel
+FROM sales
+GROUP BY CUBE (region, channel);
+```
+
+Gotcha:
+- `WHERE` filters rows before grouping; `HAVING` filters groups after aggregation.
+
+---
+
+## 6) Window Functions (Very Common)
+
+### Rank rows per group
+```sql
+SELECT
+  user_id,
+  event_time,
+  ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY event_time DESC) AS rn
+FROM events;
+```
+
+### Most recent row per user
+```sql
+WITH ranked AS (
+  SELECT *, ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY event_time DESC) AS rn
+  FROM events
 )
-SELECT ...
-FROM cte_name;
+SELECT *
+FROM ranked
+WHERE rn = 1;
 ```
 
-### Recursive CTE
+### Running total
 ```sql
-WITH RECURSIVE cte_name AS (
-  -- non-recursive term
-  SELECT ...
+SELECT
+  user_id,
+  event_time,
+  amount,
+  SUM(amount) OVER (PARTITION BY user_id ORDER BY event_time) AS running_amount
+FROM payments;
+```
+
+### Window frame bounds (`ROWS` / `RANGE`)
+Common bounds:
+- `ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW` -> running aggregate
+- `ROWS BETWEEN 6 PRECEDING AND CURRENT ROW` -> rolling 7 rows
+- `ROWS BETWEEN 1 PRECEDING AND 1 FOLLOWING` -> centered window
+- `RANGE BETWEEN INTERVAL '7 days' PRECEDING AND CURRENT ROW` -> value/time-based range (engine support varies)
+
+Running sum with explicit frame:
+```sql
+SELECT
+  user_id,
+  event_time,
+  amount,
+  SUM(amount) OVER (
+    PARTITION BY user_id
+    ORDER BY event_time
+    ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+  ) AS running_amount
+FROM payments;
+```
+
+Rolling 7-row average:
+```sql
+SELECT
+  user_id,
+  event_time,
+  amount,
+  AVG(amount) OVER (
+    PARTITION BY user_id
+    ORDER BY event_time
+    ROWS BETWEEN 6 PRECEDING AND CURRENT ROW
+  ) AS avg_last_7_rows
+FROM payments;
+```
+
+Gotcha:
+- With `ORDER BY`, default frame can behave like running aggregate; define frame explicitly.
+- `ROWS` counts physical rows; `RANGE` groups peers with same `ORDER BY` value and can produce different results.
+
+---
+
+## 7) CTEs and Recursive Queries
+
+### Standard CTE
+```sql
+WITH high_value AS (
+  SELECT customer_id, SUM(total) AS spend
+  FROM orders
+  GROUP BY customer_id
+)
+SELECT *
+FROM high_value
+WHERE spend > 10000;
+```
+
+### Recursive CTE skeleton
+```sql
+WITH RECURSIVE hierarchy AS (
+  SELECT id, manager_id, 1 AS lvl
+  FROM employees
+  WHERE manager_id IS NULL
   UNION ALL
-  -- recursive term
-  SELECT ...
-  FROM ...
-  JOIN cte_name ...
+  SELECT e.id, e.manager_id, h.lvl + 1
+  FROM employees e
+  JOIN hierarchy h ON e.manager_id = h.id
 )
-SELECT * FROM cte_name;
+SELECT * FROM hierarchy;
 ```
 
 Guideline:
-- `UNION` removes duplicates each iteration.
-- `UNION ALL` is usually faster; deduplicate at the end if needed.
+- Use `UNION ALL` unless dedup is required.
 
-## Transactions
-ACID:
-- `Atomicity`
-- `Consistency`
-- `Isolation`
-- `Durability`
+---
+
+## 8) DML Write Patterns
+
+### Insert + returning
+```sql
+INSERT INTO users(name, email)
+VALUES ('Ana', 'ana@x.com')
+RETURNING id;
+```
+
+### Update from another table
+```sql
+UPDATE t1
+SET c1 = t2.new_value
+FROM t2
+WHERE t1.key = t2.key;
+```
+
+### Delete using join key
+```sql
+DELETE FROM contacts c
+USING blacklist b
+WHERE c.phone = b.phone;
+```
+
+### Upsert (`ON CONFLICT`)
+```sql
+INSERT INTO customers(name, email)
+VALUES ('Microsoft', 'hotline@microsoft.com')
+ON CONFLICT (name)
+DO UPDATE SET email = EXCLUDED.email;
+```
+
+Gotcha:
+- Upsert target must match a unique constraint/index.
+
+---
+
+## 9) DDL, Keys, and Constraints
+
+### Must-know constraints
+- `PRIMARY KEY` (unique + not null)
+- `FOREIGN KEY` (`ON DELETE CASCADE/SET NULL/...`)
+- `UNIQUE`
+- `CHECK`
+- `NOT NULL`
+
+```sql
+CREATE TABLE orders (
+  id BIGSERIAL PRIMARY KEY,
+  customer_id BIGINT NOT NULL,
+  amount NUMERIC CHECK (amount > 0),
+  CONSTRAINT fk_customer
+    FOREIGN KEY (customer_id)
+    REFERENCES customers(id)
+    ON DELETE CASCADE
+);
+```
+
+Data anomaly reminders:
+- Insert anomaly
+- Update anomaly
+- Delete anomaly
+
+Normal forms:
+- 1NF, 2NF, 3NF, BCNF (interview-level usually enough)
+
+---
+
+## 10) Indexing and Performance
+
+### Index basics
+- B-tree default: equality + range + prefix `LIKE 'foo%'`
+- Hash: equality-only
+- GIN: `jsonb`/arrays/full-text style multi-valued search
+- BRIN: huge naturally ordered tables
+
+### Useful index patterns
+```sql
+-- expression index
+CREATE INDEX idx_lower_email ON users (LOWER(email));
+
+-- partial index
+CREATE INDEX idx_active_orders ON orders (customer_id)
+WHERE status = 'active';
+
+-- unique index
+CREATE UNIQUE INDEX idx_users_email ON users (email);
+```
+
+Caveats:
+- Every index improves reads but slows writes and uses storage.
+- Indexes are only used when predicates align with indexed expression/order/selectivity.
+- Leading wildcard (`LIKE '%abc'`) typically cannot use normal B-tree index efficiently.
+
+---
+
+## 11) Query Planning (`EXPLAIN`)
+
+```sql
+EXPLAIN ANALYZE
+SELECT ...;
+```
+
+Look for:
+- Seq scan vs index scan
+- estimated rows vs actual rows mismatch
+- join strategy (`Nested Loop`, `Hash Join`, `Merge Join`)
+
+Safe pattern for testing writes:
 
 ```sql
 BEGIN;
+  EXPLAIN ANALYZE UPDATE ...;
+ROLLBACK;
+```
 
-UPDATE accounts
-SET balance = balance - 1000
-WHERE id = 1;
+---
 
-UPDATE accounts
-SET balance = balance + 1000
-WHERE id = 2;
+## 12) Transactions and Isolation Basics
 
+```sql
+BEGIN;
+UPDATE accounts SET balance = balance - 1000 WHERE id = 1;
+UPDATE accounts SET balance = balance + 1000 WHERE id = 2;
 COMMIT;
 ```
 
-`ROLLBACK` cancels uncommitted work.
+ACID:
+- Atomicity, Consistency, Isolation, Durability
 
-## Pattern Matching (`LIKE`)
-- `%` matches any sequence.
-- `_` matches one character.
-- `ILIKE` is case-insensitive.
+Gotchas:
+- Long transactions hold locks longer and increase contention.
+- Missing transaction boundaries can leave multi-step writes inconsistent.
 
-## Fetch / Pagination
-`FETCH` is SQL-standard alternative to `LIMIT`.
+---
 
+## 13) Pagination and Retrieval Patterns
+
+### Offset pagination
 ```sql
-SELECT film_id, title
-FROM film
-ORDER BY title
-OFFSET 5 ROWS
-FETCH FIRST 5 ROWS ONLY;
+SELECT id, created_at
+FROM events
+ORDER BY created_at DESC
+OFFSET 100 LIMIT 20;
 ```
 
-## Join Algorithms (Planner)
-- `Nested Loop Join`: often for small inputs or non-equality predicates.
-- `Hash Join`: common for equality joins without useful index path.
-- `Merge Join`: efficient when both sides are sorted / sortable.
-
-## Pivot and Unpivot
-### Static Pivot
-Use `CASE` or `FILTER`.
-
+### Keyset pagination (preferred at scale)
 ```sql
-SELECT
-  city,
-  SUM(raindays) FILTER (WHERE year = 2013) AS "2013",
-  SUM(raindays) FILTER (WHERE year = 2014) AS "2014"
-FROM rainfall
-GROUP BY city
-ORDER BY city;
+SELECT id, created_at
+FROM events
+WHERE (created_at, id) < ('2026-01-01', 12345)
+ORDER BY created_at DESC, id DESC
+LIMIT 20;
 ```
 
-### Dynamic Pivot (JSON)
+Gotcha:
+- Always use deterministic `ORDER BY` for pagination.
+
+---
+
+## 14) SQL Interview Patterns (High Frequency)
+
+- Latest row per entity: `ROW_NUMBER() ... WHERE rn = 1`
+- Top N per group: `ROW_NUMBER()/RANK()` with partition
+- Gaps and islands: window functions + date/id arithmetic
+- Anti-join missing records: `LEFT JOIN ... WHERE right.id IS NULL`
+- Dedup rows: CTE with `ROW_NUMBER` then keep `rn = 1`
+- Running totals and moving averages: window frame functions
+- Pivot-ish reporting: `SUM(...) FILTER (WHERE ...)`
+
+---
+
+## 15) PostgreSQL-Specific Handy Features
+
+- `RETURNING` on `INSERT/UPDATE/DELETE`
+- `ON CONFLICT` for upsert
+- `LATERAL` joins for per-row dependent subqueries
+- Materialized views + `REFRESH MATERIALIZED VIEW`
+- `ILIKE` for case-insensitive matching
+
+`LATERAL` example:
 ```sql
-SELECT city, json_object_agg(year, total ORDER BY year)
-FROM (
-  SELECT city, year, SUM(raindays) AS total
-  FROM rainfall
-  GROUP BY city, year
-) s
-GROUP BY city
-ORDER BY city;
-```
-
-### Client-side Pivot (`psql`)
-Use `\crosstabview` after query output.
-
-### Unpivot
-```sql
-SELECT key, value
-FROM (
-  SELECT row_to_json(t.*) AS line
-  FROM rain_months t
-) r
-CROSS JOIN LATERAL json_each_text(r.line);
-```
-
-## Lateral Join
-Use when inner query depends on values from outer rows.
-
-```sql
-SELECT ...
-FROM outer_table o
+SELECT u.id, x.last_order_time
+FROM users u
 LEFT JOIN LATERAL (
-  SELECT ...
-  FROM inner_table i
-  WHERE i.user_id = o.user_id
-  ORDER BY i.time
+  SELECT o.created_at AS last_order_time
+  FROM orders o
+  WHERE o.user_id = u.id
+  ORDER BY o.created_at DESC
   LIMIT 1
 ) x ON true;
 ```
 
-## Data Anomalies
-- `Insert Anomaly`: cannot insert child data without required parent.
-- `Update Anomaly`: duplicate data updated inconsistently.
-- `Delete Anomaly`: deleting one fact removes unrelated needed data.
+---
 
-## Useful Functions
+## 16) High-Value Gotchas and Caveats
+
+- `NOT IN` + `NULL` trap; prefer `NOT EXISTS`.
+- `COUNT(*)` counts rows; `COUNT(col)` ignores `NULL`.
+- `LEFT JOIN` + `WHERE right.col = ...` can accidentally turn into inner join.
+- Non-deterministic ordering without explicit `ORDER BY`.
+- Selecting non-grouped columns with aggregation is invalid (or non-portable in some engines).
+- Index not used due to function wrapping (`WHERE LOWER(col)=...` without expression index).
+- Over-indexing can hurt write-heavy workloads.
+- CTE materialization/inlining behavior differs by PostgreSQL version and query shape.
+
+---
+
+## 17) Final Interview Checklist
+
+- Confirm business requirement and edge cases (`NULL`, duplicates, ties).
+- Start with correct logic, then optimize.
+- Explain join choice and expected row cardinality.
+- Mention index strategy for critical predicates.
+- Validate with sample output and corner cases.
+- Discuss tradeoffs: readability, correctness, performance.
+
+---
+
+## 18) Common Interview Questions + Query Templates
+
+1. Latest row per entity  
+Template:
 ```sql
-SUBSTRING(string, start_position, length);
-
-EXTRACT(YEAR  FROM birth_date);
-EXTRACT(MONTH FROM birth_date);
-EXTRACT(DAY   FROM birth_date);
-
-SELECT array_agg(time) FROM runners;
+WITH ranked AS (
+  SELECT t.*,
+         ROW_NUMBER() OVER (PARTITION BY entity_id ORDER BY event_time DESC) AS rn
+  FROM t
+)
+SELECT *
+FROM ranked
+WHERE rn = 1;
 ```
 
-## Quick Reminders
-- Retrieve most recent row per user (`ROW_NUMBER()` + partition).
-- Compare anti-join forms carefully when `NULL`s are involved.
-- Revisit index fragmentation / maintenance strategy during performance tuning.
+2. Top N per group  
+Template:
+```sql
+WITH ranked AS (
+  SELECT t.*,
+         ROW_NUMBER() OVER (PARTITION BY group_id ORDER BY metric DESC) AS rn
+  FROM t
+)
+SELECT *
+FROM ranked
+WHERE rn <= 3;
+```
+
+3. Find duplicates by key  
+Template:
+```sql
+SELECT key_col, COUNT(*) AS cnt
+FROM t
+GROUP BY key_col
+HAVING COUNT(*) > 1;
+```
+
+4. Remove duplicates but keep newest row  
+Template:
+```sql
+WITH d AS (
+  SELECT id,
+         ROW_NUMBER() OVER (
+           PARTITION BY business_key
+           ORDER BY updated_at DESC, id DESC
+         ) AS rn
+  FROM t
+)
+DELETE FROM t
+USING d
+WHERE t.id = d.id
+  AND d.rn > 1;
+```
+
+5. Missing records (anti-join)  
+Template:
+```sql
+SELECT a.*
+FROM a
+LEFT JOIN b ON b.id = a.id
+WHERE b.id IS NULL;
+```
+
+6. Running total by user  
+Template:
+```sql
+SELECT user_id, event_time, amount,
+       SUM(amount) OVER (
+         PARTITION BY user_id
+         ORDER BY event_time
+       ) AS running_sum
+FROM payments;
+```
+
+7. Day-over-day change (`LAG`)  
+Template:
+```sql
+SELECT dt,
+       value,
+       value - LAG(value) OVER (ORDER BY dt) AS delta
+FROM metrics;
+```
+
+8. Upsert into dimension/reference table  
+Template:
+```sql
+INSERT INTO dim_user(user_id, email, updated_at)
+VALUES ($1, $2, NOW())
+ON CONFLICT (user_id)
+DO UPDATE SET
+  email = EXCLUDED.email,
+  updated_at = EXCLUDED.updated_at;
+```
+
+9. Keyset pagination (stable, scalable)  
+Template:
+```sql
+SELECT id, created_at, payload
+FROM events
+WHERE (created_at, id) < ($last_created_at, $last_id)
+ORDER BY created_at DESC, id DESC
+LIMIT 50;
+```
+
+10. Conditional pivot for reporting  
+Template:
+```sql
+SELECT user_id,
+       SUM(amount) FILTER (WHERE status = 'success') AS success_amt,
+       SUM(amount) FILTER (WHERE status = 'failed')  AS failed_amt
+FROM txns
+GROUP BY user_id;
+```
+
+Quick caveats:
+- Add deterministic tie-breakers in `ORDER BY` (`id DESC`) for stable results.
+- For deletes/updates, test with `SELECT` first or run inside transaction + rollback.
+- Validate `NULL` behavior explicitly in anti-join and comparison queries.

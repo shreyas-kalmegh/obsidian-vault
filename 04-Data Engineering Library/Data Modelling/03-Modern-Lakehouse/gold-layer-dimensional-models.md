@@ -1,25 +1,54 @@
 # Gold Layer Dimensional Models
 
-## Objective
-Convert Silver entities/events into query-optimized fact and dimension models for BI and analytics.
+## Overview
+Gold models translate canonical Silver data into business-consumable facts, dimensions, and curated marts.
+Gold should optimize for metric trust, query performance, and semantic clarity.
 
-## Typical Output
-- `dim_customer`, `dim_product`, `dim_date`
-- `fct_orders`, `fct_returns`, `fct_revenue_daily`
+## Typical Gold Outputs
+- Dimensions: `dim_customer`, `dim_product`, `dim_date`
+- Facts: `fct_order_line`, `fct_return_line`, `fct_subscription_daily`
+- KPI marts: `mart_revenue_daily`, `mart_retention_monthly`
 
-## Checklist
-- [ ] Grain declaration per fact
-- [ ] SCD strategy per mutable attribute
-- [ ] Conformed dimensions reused across marts
-- [ ] Data tests for PK/FK, nulls, duplicates
+## Design Approach
+1. Start from business questions and KPI definitions.
+2. Declare fact grain explicitly.
+3. Reuse conformed dimensions.
+4. Apply SCD strategy where history is required.
+5. Publish metric contracts in semantic layer.
+
+## Example: Subscription Analytics Gold
+- `fct_subscription_event` (transaction fact)
+- `dim_plan` (Type 2 for plan changes)
+- `fct_subscription_daily_snapshot` (periodic snapshot)
+
+Common metrics:
+- MRR
+- Churn rate
+- Net expansion
+
+## Data Quality in Gold
+Add tests for:
+- Fact grain uniqueness
+- Dimension key validity (FK coverage)
+- Null thresholds for required business fields
+- Reconciliation against source-of-truth totals
+
+## Performance Patterns
+- Partition facts by business date
+- Cluster by common filter/join keys
+- Pre-aggregate heavy dashboards into marts
 
 ## Common Mistakes
-- Building Gold as one wide denormalized table
-- No semantic ownership for metrics
+- Building one giant denormalized "gold" table for everything
+- Embedding conflicting KPI definitions across teams
+- Skipping conformed dimensions and semantic ownership
 
-## Interview Prompts
-- Show how you design a gold model for subscription analytics.
+## Practical Checklist
+1. Grain and KPI dictionary approved by stakeholders.
+2. Conformed dimensions reused, not duplicated.
+3. SCD policy documented for mutable attributes.
+4. Gold refresh dependencies and SLAs documented.
 
 ## Related Notes
-- [[medallion-architecture]]
 - [[kimball-principles]]
+- [[medallion-architecture]]
