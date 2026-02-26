@@ -39,7 +39,7 @@ Produce medium-depth, practical data modeling notes that are:
 ## Token-Efficient Workflow
 For new sessions, read only:
 1. `04-Data Engineering Library/Data Modelling/CONTEXT.md`
-2. `notes/session-handoff.md`
+2. `04-Data Engineering Library/Data Modelling/session-handoff.md`
 3. user-specified target files
 
 Avoid full-repo scans unless the task requires them.

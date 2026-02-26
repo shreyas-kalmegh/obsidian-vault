@@ -89,6 +89,9 @@ What to watch in Spark UI:
 - Spill (memory/disk)
 - Stage time dominated by stragglers
 
+Interview Guideline:
+“I start from output-size ÷ 128–256MB, ensure enough partitions for cluster cores, then tune using task duration/skew/spill metrics in Spark UI. Increase size for heavu compute/large clusters”
+
 Gotcha:
 - Repartitioning repeatedly at multiple points can add unnecessary shuffle.
 
@@ -300,6 +303,38 @@ Strong Spark tuning discipline yields:
 - More predictable SLAs
 - Fewer production incidents from OOM/skew
 - Better scalability as data grows
+
+---
+
+## CDC Schema Evolution at File Level
+
+Key point:
+- In CDC pipelines, schema changes usually do not rewrite all existing target files automatically.
+
+What happens for common source changes:
+1. Add column (nullable):
+- New CDC writes include the new column.
+- Old files remain as-is; readers typically see `NULL` for old rows.
+
+2. Add column (`NOT NULL`):
+- Not always a full rewrite.
+- Full-row CDC events happen only if source DB/connector emits updates for existing rows (for example, explicit backfill/default materialization in source).
+- If only metadata/schema change is emitted, old target rows/files are not rewritten automatically.
+
+3. Drop column:
+- Often metadata-level hide/drop first.
+- Physical old files can still contain the column until compaction/rewrite/vacuum.
+
+4. Type change:
+- Compatible widening may work in some table formats.
+- Incompatible changes usually need explicit migration (create-and-swap or rewrite affected data).
+
+Format behavior summary:
+- Plain Parquet lake: weaker schema evolution guarantees; merge/read behavior is reader-dependent.
+- Delta/Iceberg/Hudi: schema versions tracked in metadata/transaction log; only changed data files are typically rewritten during CDC `MERGE`/upsert paths.
+
+Interview-ready answer:
+- "Adding a new `NOT NULL` source column does not automatically force full rewrite. A full rewrite-like effect occurs only when the source emits backfill updates for all rows or when we explicitly run migration/backfill jobs."
 
 ## Related
 - [[04-Data Engineering Library/Spark Deep Internals/Spark-Architecture-Overview.md]]

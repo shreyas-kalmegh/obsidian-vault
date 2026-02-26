@@ -31,6 +31,10 @@ Strong answer outline:
 - Reprocess rolling window (for example last 30 days)
 - Use deterministic merge ordering (`source_changed_ts`)
 - Rebuild dependent Gold aggregates and publish restatement notice
+Production-level walkthrough:
+- See [[late-arriving-file-production-example]] for full Bronze -> Silver SCD2 -> Gold Type 2 flow.
+- It covers: new keys, current-row change, mid-history late change, no-op duplicates, deletes, and idempotent replay.
+- In interview answers, explicitly state that late arrivals may require updating non-current intervals, not only current rows.
 
 ## 3. SCD Strategy
 Question:
@@ -80,3 +84,4 @@ Use explicit tradeoff framing:
 - [[design-case-studies]]
 - [[anti-patterns]]
 - [[late-arriving-data]]
+- [[late-arriving-file-production-example]]

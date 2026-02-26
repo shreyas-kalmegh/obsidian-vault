@@ -37,7 +37,7 @@ This folder contains structured notes for dimensional modeling:
 ```text
 Read only:
 - 04-Data Engineering Library/Data Modelling/CONTEXT.md
-- notes/session-handoff.md
+- 04-Data Engineering Library/Data Modelling/session-handoff.md
 - files I mention next
 
 Task scope is only inside:
@@ -48,7 +48,7 @@ Keep edits medium-depth with practical examples (not cheatsheet style).
 ```
 
 ## Handoff Reminder
-At end of session, update `notes/session-handoff.md` with:
+At end of session, update `session-handoff.md` with:
 - objective
 - files changed
 - open questions
