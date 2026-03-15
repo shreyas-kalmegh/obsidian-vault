@@ -1,0 +1,39 @@
+{
+  "tableName": "orders_hybrid",
+  "tableType": "REALTIME",
+  "segmentsConfig": {
+    "timeColumnName": "event_time_ms",
+    "schemaName": "orders_hybrid",
+    "replication": "1"
+  },
+  "tableIndexConfig": {
+    "loadMode": "MMAP"
+  },
+  "ingestionConfig": {
+    "continueOnError": true,
+    "streamIngestionConfig": {
+      "streamConfigMaps": [
+        {
+          "streamType": "kafka",
+          "stream.kafka.topic.name": "orders-by-id",
+          "stream.kafka.broker.list": "<MSK_BROKERS>",
+          "stream.kafka.consumer.type": "lowlevel",
+          "stream.kafka.consumer.prop.auto.offset.reset": "smallest",
+          "stream.kafka.decoder.class.name": "org.apache.pinot.plugin.inputformat.json.JSONMessageDecoder",
+          "realtime.segment.flush.threshold.rows": "100000",
+          "realtime.segment.flush.threshold.time": "1h"
+        }
+      ]
+    }
+  },
+  "upsertConfig": {
+    "mode": "FULL",
+    "comparisonColumns": ["event_time_ms"],
+    "deleteRecordColumn": "is_deleted"
+  },
+  "tenants": {
+    "broker": "DefaultTenant",
+    "server": "DefaultTenant"
+  },
+  "metadata": {}
+}

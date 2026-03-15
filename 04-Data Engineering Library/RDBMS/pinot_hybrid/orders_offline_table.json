@@ -1,0 +1,17 @@
+{
+  "tableName": "orders_hybrid",
+  "tableType": "OFFLINE",
+  "segmentsConfig": {
+    "timeColumnName": "event_time_ms",
+    "schemaName": "orders_hybrid",
+    "replication": "1"
+  },
+  "tableIndexConfig": {
+    "loadMode": "MMAP"
+  },
+  "tenants": {
+    "broker": "DefaultTenant",
+    "server": "DefaultTenant"
+  },
+  "metadata": {}
+}

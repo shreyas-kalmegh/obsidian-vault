@@ -1,0 +1,26 @@
+{
+  "schemaName": "orders_hybrid",
+  "dimensionFieldSpecs": [
+    { "name": "order_id", "dataType": "STRING" },
+    { "name": "customer_id", "dataType": "STRING" },
+    { "name": "status", "dataType": "STRING" }
+  ],
+  "metricFieldSpecs": [
+    { "name": "amount", "dataType": "DOUBLE" }
+  ],
+  "dateTimeFieldSpecs": [
+    {
+      "name": "event_time_ms",
+      "dataType": "LONG",
+      "format": "1:MILLISECONDS:EPOCH",
+      "granularity": "1:MILLISECONDS"
+    },
+    {
+      "name": "ingest_time_ms",
+      "dataType": "LONG",
+      "format": "1:MILLISECONDS:EPOCH",
+      "granularity": "1:MILLISECONDS"
+    }
+  ],
+  "primaryKeyColumns": ["order_id"]
+}
