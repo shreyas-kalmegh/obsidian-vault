@@ -109,16 +109,30 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "04-Data Engineering Library/Interview Questions/dsa/topics/hashmaps.md",
+                "file": "04-Data Engineering Library/Interview Questions/templates/system-design-template.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "hashmaps"
+              "title": "system-design-template"
+            }
+          },
+          {
+            "id": "b99e5afbae4ae353",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "04-Data Engineering Library/Spark Deep Internals/cheetsheet.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "cheetsheet"
             }
           }
         ],
-        "currentTab": 7
+        "currentTab": 8
       }
     ],
     "direction": "vertical"
@@ -271,34 +285,37 @@
       "command-palette:Open command palette": false
     }
   },
-  "active": "c24ea93572b5aa6c",
+  "active": "b99e5afbae4ae353",
   "lastOpenFiles": [
-    "04-Data Engineering Library/Interview Questions/dsa/topics/arrays.md",
-    "04-Data Engineering Library/Interview Questions/dsa/foundations/loop-boundaries-and-pattern-mental-models.md",
-    "04-Data Engineering Library/Kinesis Deep Internals/Kinesis-Enhanced-Fan-Out.md",
-    "04-Data Engineering Library/Pinot Deep Internals/Pinot-Deep-Internals-Index.md",
-    "04-Data Engineering Library/Pinot Deep Internals/Pinot-Architecture.md",
-    "04-Data Engineering Library/Kafka Deep Internals/Kafka-Interview-Questions-Data-Engineering.md",
-    "04-Data Engineering Library/Kafka Deep Internals/Kafka-Deep-Internals-Index.md",
-    "04-Data Engineering Library/Kafka Deep Internals/Kafka-Exactly-Once-Semantics.md",
-    "04-Data Engineering Library/Kubernetes and Docker Deep Internals/Kubernetes-Scaling-Strategies.md",
-    "04-Data Engineering Library/Kubernetes and Docker Deep Internals/Kubernetes-Observability-and-KPIs.md",
     "04-Data Engineering Library/Kubernetes and Docker Deep Internals/Kubernetes-Rolling-Updates-and-Probes.md",
-    "04-Data Engineering Library/Kubernetes and Docker Deep Internals/Kubernetes-Autoscaling-and-Capacity.md",
-    "04-Data Engineering Library/Kubernetes and Docker Deep Internals/Kubernetes-ConfigMaps-Secrets-and-Security-Context.md",
-    "04-Data Engineering Library/Kubernetes and Docker Deep Internals/Kubernetes-Storage-PVs-PVCs-and-StatefulSets.md",
-    "04-Data Engineering Library/Kubernetes and Docker Deep Internals/Kubernetes-DNS-and-Service-Discovery.md",
-    "04-Data Engineering Library/Kubernetes and Docker Deep Internals/Kubernetes-Networking-Services-and-Ingress.md",
-    "04-Data Engineering Library/Kubernetes and Docker Deep Internals/Kubernetes-Scheduler-and-Placement.md",
-    "04-Data Engineering Library/Kubernetes and Docker Deep Internals/Kubernetes-Controllers-and-Reconciliation.md",
     "04-Data Engineering Library/Kubernetes and Docker Deep Internals/Kubernetes-Pod-Lifecycle.md",
-    "04-Data Engineering Library/Kubernetes and Docker Deep Internals/Kubernetes-Architecture.md",
+    "04-Data Engineering Library/Kubernetes and Docker Deep Internals/Kubernetes-Observability-and-KPIs.md",
+    "04-Data Engineering Library/Kubernetes and Docker Deep Internals/Kubernetes-and-Docker-Cheatsheet.md",
+    "04-Data Engineering Library/Kubernetes and Docker Deep Internals/Kubernetes-and-Docker-Deep-Internals-Index.md",
     "04-Data Engineering Library/Kubernetes and Docker Deep Internals/Docker-Networking-and-Storage.md",
     "04-Data Engineering Library/Kubernetes and Docker Deep Internals/Docker-Image-Layers-and-Union-Filesystems.md",
     "04-Data Engineering Library/Kubernetes and Docker Deep Internals/Docker-Container-Runtime-Basics.md",
-    "04-Data Engineering Library/Kubernetes and Docker Deep Internals/Kubernetes-Interview-Questions-Data-Engineering.md",
-    "04-Data Engineering Library/Kubernetes and Docker Deep Internals/Kubernetes-and-Docker-Cheatsheet.md",
-    "04-Data Engineering Library/Kubernetes and Docker Deep Internals/Kubernetes-and-Docker-Deep-Internals-Index.md",
+    "04-Data Engineering Library/Snowflake Deep Internals/04-Micro-Partitions-Clustering-Pruning.md",
+    "04-Data Engineering Library/Snowflake Deep Internals/12-Data-Skew-in-Micro-Partitions.md",
+    "04-Data Engineering Library/Snowflake Deep Internals/11-Interview-Scenario-Prep.md",
+    "04-Data Engineering Library/Snowflake Deep Internals/07-Data-Ingestion-Patterns.md",
+    "04-Data Engineering Library/Pinot Deep Internals/Pinot-Scaling-Strategies.md",
+    "04-Data Engineering Library/Pinot Deep Internals/Pinot-Multi-Stage-Query-Engine.md",
+    "04-Data Engineering Library/Pinot Deep Internals/Pinot-Interview-Questions-Data-Engineering.md",
+    "04-Data Engineering Library/Pinot Deep Internals/Pinot-Cheatsheet.md",
+    "04-Data Engineering Library/Pinot Deep Internals/Pinot-Architecture.md",
+    "04-Data Engineering Library/OS and Networking/Data-Engineering-Debugging-Cheatsheet.md",
+    "04-Data Engineering Library/OS and Networking/Bash-Shell-Debugging-Cheatsheet.md",
+    "04-Data Engineering Library/Airflow Deep Internals/11-Interview-Compact-Set.md",
+    "04-Data Engineering Library/Airflow Deep Internals/06-Airflow-on-Kubernetes-and-Operations.md",
+    "04-Data Engineering Library/Airflow Deep Internals/05-Performance-Tuning-Backfills-and-Cost.md",
+    "04-Data Engineering Library/Airflow Deep Internals/04-Reliability-Idempotency-and-Data-Contracts.md",
+    "04-Data Engineering Library/Airflow Deep Internals/03-Scheduler-Internals-and-Task-Lifecycle.md",
+    "04-Data Engineering Library/Airflow Deep Internals/02-DAG-Authoring-and-Dependency-Patterns.md",
+    "04-Data Engineering Library/Airflow Deep Internals/01-Airflow-Architecture-Foundations.md",
+    "04-Data Engineering Library/OS and Networking",
+    "Untitled",
+    "04-Data Engineering Library/Interview Questions/templates",
     "04-Data Engineering Library/Kubernetes and Docker Deep Internals",
     "04-Data Engineering Library/RDBMS/pinot_hybrid/replay_late_orders_to_msk.py",
     "04-Data Engineering Library/RDBMS/pinot_hybrid/orders_offline_table.json",
@@ -306,9 +323,6 @@
     "04-Data Engineering Library/RDBMS/pinot_hybrid/orders_schema.json",
     "04-Data Engineering Library/RDBMS/pinot_hybrid",
     "04-Data Engineering Library/RDBMS/flink_repartition_orders_to_msk.py",
-    "04-Data Engineering Library/Interview Questions/sql/practice/scd2.sql",
-    "04-Data Engineering Library/Interview Questions/past questions/saucelabs",
-    "04-Data Engineering Library/Airflow Deep Internals",
     "attachments/dsa roadmap.png",
     "attachments/linkedlist4.png",
     "attachments/linkedlist3.png",

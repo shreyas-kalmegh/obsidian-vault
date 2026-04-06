@@ -56,7 +56,8 @@ Why last:
 4. [[04-Data Engineering Library/Kafka Deep Internals/Kafka-Producer-Reliability.md]]
 5. [[04-Data Engineering Library/Kafka Deep Internals/Kafka-Consumer-Protocol.md]]
 6. [[04-Data Engineering Library/Kafka Deep Internals/Kafka-Exactly-Once-Semantics.md]]
-7. [[04-Data Engineering Library/Kafka Deep Internals/Kafka-Interview-Questions-Data-Engineering.md]]
+7. [[04-Data Engineering Library/Kafka Deep Internals/Kafka-CDC-Streams-Interview-Example.md]]
+8. [[04-Data Engineering Library/Kafka Deep Internals/Kafka-Interview-Questions-Data-Engineering.md]]
 
 ### For Production Debugging
 1. [[04-Data Engineering Library/Kafka Deep Internals/Kafka-Monitoring-KPIs.md]]
@@ -68,4 +69,5 @@ Why last:
 
 ## Companion Notes
 - [[04-Data Engineering Library/Kafka Deep Internals/Kafka-Cheatsheet.md]] for quick recall
+- [[04-Data Engineering Library/Kafka Deep Internals/Kafka-CDC-Streams-Interview-Example.md]] for CDC partition-key and topic-design scenarios
 - [[04-Data Engineering Library/Kafka Deep Internals/Kafka-Interview-Questions-Data-Engineering.md]] for DE-focused interview preparation
